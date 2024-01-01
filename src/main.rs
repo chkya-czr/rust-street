@@ -2,6 +2,9 @@
 
 // use std::fmt::Debug;
 
+use axum::{routing::post, Router};
+use serde::Deserialize;
+
 #[derive(Clone)]
 pub enum INSTRUMENT {
     GOOG,
@@ -10,7 +13,7 @@ pub enum INSTRUMENT {
     TSL,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Deserialize)]
 pub enum BidOrAsk {
     BID,
     ASK,
@@ -24,51 +27,89 @@ pub enum BidOrAsk {
 //     }
 // }
 
-// #[derive(Debug)]
-fn main() {
-    let mut order_book = OrderBook::new();
-
-    order_manager::create_order(
-        Order::new(10.1, 100, BidOrAsk::ASK),
-        BidOrAsk::ASK,
-        &mut order_book,
-    );
-    order_manager::create_order(
-        Order::new(10.0, 150, BidOrAsk::ASK),
-        BidOrAsk::ASK,
-        &mut order_book,
-    );
-    order_manager::create_order(
-        Order::new(10.2, 10, BidOrAsk::ASK),
-        BidOrAsk::ASK,
-        &mut order_book,
-    );
-    order_manager::create_order(
-        Order::new(9.98, 100, BidOrAsk::ASK),
-        BidOrAsk::ASK,
-        &mut order_book,
-    );
-    order_manager::create_order(
-        Order::new(9.8, 200, BidOrAsk::BID),
-        BidOrAsk::BID,
-        &mut order_book,
-    );
-    order_manager::create_order(
-        Order::new(10.1, 10, BidOrAsk::BID),
-        BidOrAsk::BID,
-        &mut order_book,
-    );
-    order_manager::create_order(
-        Order::new(10.5, 20, BidOrAsk::ASK),
-        BidOrAsk::ASK,
-        &mut order_book,
-    );
-    order_manager::create_order(
-        Order::new(9.5, 100, BidOrAsk::BID),
-        BidOrAsk::BID,
-        &mut order_book,
-    );
+#[derive(Deserialize)]
+struct OrderBody {
+    price: f64,
+    quantity: u16,
+    order_type: BidOrAsk,
 }
+
+#[tokio::main]
+async fn main() {
+    let app = Router::new().route("/order", post(order_handler::new_order));
+
+    println!("Running on http://localhost:3000");
+    axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
+}
+
+pub mod order_handler {
+    use axum::Json;
+
+    use crate::{order_manager, BidOrAsk, Order, OrderBody, OrderBook};
+
+    pub async fn new_order(Json(order_data): Json<OrderBody>) {
+        // format!("Added item: {}", item.title)
+        let mut order_book = OrderBook::new();
+        order_manager::create_order(
+            Order::new(
+                order_data.price,
+                order_data.quantity,
+                order_data.order_type.clone(),
+            ),
+            order_data.order_type.clone(),
+            &mut order_book,
+        );
+    }
+}
+
+// #[derive(Debug)]
+// fn main() {
+//     let mut order_book = OrderBook::new();
+
+//     order_manager::create_order(
+//         Order::new(10.1, 100, BidOrAsk::ASK),
+//         BidOrAsk::ASK,
+//         &mut order_book,
+//     );
+//     order_manager::create_order(
+//         Order::new(10.0, 150, BidOrAsk::ASK),
+//         BidOrAsk::ASK,
+//         &mut order_book,
+//     );
+//     order_manager::create_order(
+//         Order::new(10.2, 10, BidOrAsk::ASK),
+//         BidOrAsk::ASK,
+//         &mut order_book,
+//     );
+//     order_manager::create_order(
+//         Order::new(9.98, 100, BidOrAsk::ASK),
+//         BidOrAsk::ASK,
+//         &mut order_book,
+//     );
+//     order_manager::create_order(
+//         Order::new(9.8, 200, BidOrAsk::BID),
+//         BidOrAsk::BID,
+//         &mut order_book,
+//     );
+//     order_manager::create_order(
+//         Order::new(10.1, 10, BidOrAsk::BID),
+//         BidOrAsk::BID,
+//         &mut order_book,
+//     );
+//     order_manager::create_order(
+//         Order::new(10.5, 20, BidOrAsk::ASK),
+//         BidOrAsk::ASK,
+//         &mut order_book,
+//     );
+//     order_manager::create_order(
+//         Order::new(9.5, 100, BidOrAsk::BID),
+//         BidOrAsk::BID,
+//         &mut order_book,
+//     );
+// }
 
 #[derive(Clone)]
 pub struct Order {
