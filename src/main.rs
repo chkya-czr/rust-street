@@ -28,7 +28,7 @@ pub enum BidOrAsk {
 // }
 
 #[derive(Deserialize)]
-struct OrderBody {
+pub struct OrderBody {
     price: f64,
     quantity: u16,
     order_type: BidOrAsk,
